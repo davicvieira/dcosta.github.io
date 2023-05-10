@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Conferencia L'auto Cargo</title>
+</head>
+
+<body>
+
+    <h1 id="top">L'auto Cargo - Conferencia Pague Menos</h1>
+
+    <button onclick="gerarPdf()">Salvar</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.4.1/jspdf.debug.js"
+        integrity="sha384-THVO/sM0mFD9h7dfSndI6TS0PgAGavwKvB5hAxRRvc0o9cPLohB0wb/PTA7LdUHs"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"
+        integrity="sha512-03CCNkeosDFN2zCCu4vLpu3pJfZcrL48F3yB8k87ejT+OVMwco7IH3FW02vtbGhdncS6gyYZ/duYaC/K62xQPQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+
+    <div class="underline">
+        <div class="input">
+            <label for="codigo">:</label>
+            <input type="text" id="codigo" oninput="validarCodigoEntrada()"><br><br>
+
+
+
+
+
+        </div>
+
+    </div>
+
+    <div class="container">
+        <table id="tabela" class="table">
+            <tr>
+                <th>Pedido</th>
+                <th>Loja</th>
+                <th>Volume</th>
+                <th class="colunaBotao"><button id="remover" onclick="removerLinha(this)">Remover</button></th>
+            </tr>
+        </table>
+
+        <table id="tabelaLojas">
+            <tr>
+                <th>Loja</th>
+                <th>Qnt de Volumes</th>
+            </tr>
+        </table>
+    </div>
+
+    <p id="contador" class="contador">Total de itens bipados: 0</p>
+    <footer id="assinatura" class="footer" style="font-size: xx-small">
+        <p>Developed by Davi Costa</p>
+    </footer>
+
+    <script>
+        function gerarPdf() {
+            // Instanciar o jsPDF
+            var doc = new jsPDF();
+
+            var tables = document.querySelectorAll('#top, #tabela');
+            tables.forEach(function (table) {
+                doc.fromHTML(table.innerHTML, 15, 15);
+            });
+
+            // Gerar PDF
+            doc.save('bipagem.pdf');
+
+            // Gerar PDF
+            var pdfBlob = doc.output('blob');
+            saveAs(pdfBlob, 'bipagem.pdf');
+        }
+
+        let codigo = "";
+        let contador = 0;
+        let codigosAdicionados = [];
+
+
+
+
+
+        function adicionarLinha(codigo) {
+            let pedido = codigo.slice(0, 7);
+            let loja = codigo.slice(9, 13);
+            let volume = codigo.slice(15, 17);
+            let tabela = document.getElementById("tabela");
+            let novaLinha = tabela.insertRow();
+            let celulaPedido = novaLinha.insertCell(0);
+            let celulaLoja = novaLinha.insertCell(1);
+            let celulaVolume = novaLinha.insertCell(2);
+            celulaPedido.innerHTML = "Pedido: " + pedido;
+            celulaLoja.innerHTML = "Loja: " + loja;
+            celulaVolume.innerHTML = "Volume: " + volume;
+            celulaVolume.classList.add("volume");
+            contador++;
+            document.getElementById("contador").innerHTML = "Total de itens bipados: " + contador;
+            codigosAdicionados.push(codigo);
+            document.getElementById("codigo").value = "";
+            ordenarTabela();
+            // atualiza a nova tabela
+            let tabelaLojas = document.getElementById("tabelaLojas");
+            let linhaLoja = tabelaLojas.querySelector("tr[data-loja='" + loja + "']");
+            if (!linhaLoja) {
+                linhaLoja = tabelaLojas.insertRow();
+                linhaLoja.setAttribute("data-loja", loja);
+                let celulaNomeLoja = linhaLoja.insertCell(0);
+                let celulaQtdVolumes = linhaLoja.insertCell(1);
+                celulaNomeLoja.innerHTML = "Loja: " + loja;
+                celulaQtdVolumes.innerHTML = "Quantidade de Volumes: 1";
+            } else {
+                let celulaQtdVolumes = linhaLoja.cells[1];
+                let qtdVolumes = parseInt(celulaQtdVolumes.innerHTML.slice(23));
+                celulaQtdVolumes.innerHTML = "Quantidade de Volumes: " + (qtdVolumes + 1);
+            }
+
+            atualizarTabelaLojas();
+
+            // adiciona botão para remover linha
+            let celulaRemover = novaLinha.insertCell(3);
+            let botaoRemover = document.createElement("button");
+            botaoRemover.innerHTML = "Remover";
+            botaoRemover.onclick = function () { removerLinha(this); }
+            celulaRemover.appendChild(botaoRemover);
+
+
+            codigosAdicionados.push(codigo);
+            document.getElementById("codigo").value = "";
+            ordenarTabela();
+            atualizarTabelaLojas();
+
+            celulaRemover.classList.add("colunaBotao");
+
+
+        }
+
+        function validarCodigoEntrada() {
+            let codigo = document.getElementById("codigo").value;
+            if (codigo.length === 18 && codigo.startsWith("2023")) {
+                if (codigosAdicionados.includes(codigo)) {
+                    alert("Código de barras já adicionado!");
+                } else {
+                    adicionarLinha(codigo);
+                }
+            } else if (codigo.length === 18) {
+                alert("Código de barras inválido!");
+                document.getElementById("codigo").value = "";
+            }
+        }
+
+        function ordenarTabela() {
+            let tabela = document.getElementById("tabela");
+            let linhas = tabela.rows;
+            let arr = Array.from(linhas);
+
+            // ordenar por loja
+            arr.sort(function (a, b) {
+                let lojaA = a.cells[1].innerHTML.slice(6);
+                let lojaB = b.cells[1].innerHTML.slice(6);
+                if (lojaA < lojaB) return -1;
+                if (lojaA > lojaB) return 1;
+                return 0;
+            });
+
+            // ordenar por volume dentro de cada loja
+            let lojaAtual = "";
+            let linhasDaLoja = [];
+            for (let i = 0; i < arr.length; i++) {
+                let loja = arr[i].cells[1].innerHTML.slice(6);
+                if (loja !== lojaAtual) {
+                    if (linhasDaLoja.length > 1) {
+                        linhasDaLoja.sort(function (a, b) {
+                            let volumeA = a.cells[2].innerHTML.slice(8);
+                            let volumeB = b.cells[2].innerHTML.slice(8);
+                            return volumeA - volumeB;
+                        });
+                    }
+                    linhasDaLoja.forEach(function (linha) {
+                        tabela.appendChild(linha);
+                    });
+                    lojaAtual = loja;
+                    linhasDaLoja = [];
+                }
+                linhasDaLoja.push(arr[i]);
+            }
+            if (linhasDaLoja.length > 1) {
+                linhasDaLoja.sort(function (a, b) {
+                    let volumeA = a.cells[2].innerHTML.slice(8);
+                    let volumeB = b.cells[2].innerHTML.slice(8);
+                    return volumeA - volumeB;
+                });
+            }
+            linhasDaLoja.forEach(function (linha) {
+                tabela.appendChild(linha);
+            });
+        }
+
+        function removerLinha(botao) {
+
+            let linha = botao.parentNode.parentNode;
+            let codigo = linha.cells[0].innerHTML.slice(8) + "-" + linha.cells[1].innerHTML.slice(6) + "-" + linha.cells[2].innerHTML.slice(8);
+            let index = codigosAdicionados.indexOf(codigo);
+
+            if (confirm("Tem realmente certeza que deseja remover esse volume dessa loja??")) {
+                if (index > -1) {
+                    codigosAdicionados.splice(index, 1);
+                }
+                linha.remove();
+                atualizarContador();
+                atualizarTabelaLojas();
+            }
+        }
+
+        function atualizarContador() {
+            contador--;
+            document.getElementById("contador").innerHTML = "Total de itens bipados: " + contador;
+        }
+
+        function atualizarTabelaLojas() {
+            let tabelaLojas = document.getElementById("tabelaLojas");
+            let linhasTabela = tabelaLojas.querySelectorAll("tr[data-loja]");
+            linhasTabela.forEach(linha => {
+                let qtdVolumes = 0;
+                for (let i = 1; i < tabela.rows.length; i++) {
+                    let linhaTabela = tabela.rows[i];
+                    if (linhaTabela.cells[1].innerHTML.slice(6) === linha.getAttribute("data-loja")) {
+                        qtdVolumes++;
+                    }
+                }
+                linha.cells[1].innerHTML = "Quantidade de Volumes: " + qtdVolumes;
+                if (qtdVolumes === 0) {
+                    linha.remove();
+                }
+            });
+
+            for (let i = 1; i < tabela.rows.length; i++) {
+                let linhaTabela = tabela.rows[i];
+                let loja = linhaTabela.cells[1].innerHTML.slice(6);
+                let linhaLoja = tabelaLojas.querySelector("tr[data-loja='" + loja + "']");
+                if (!linhaLoja) {
+                    linhaLoja = tabelaLojas.insertRow();
+                    linhaLoja.setAttribute("data-loja", loja);
+                    let celulaNomeLoja = linhaLoja.insertCell(0);
+                    let celulaQtdVolumes = linhaLoja.insertCell(1);
+                    celulaNomeLoja.innerHTML = "Loja: " + loja;
+                    celulaQtdVolumes.innerHTML = "Quantidade de Volumes: 1";
+                }
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+    </script>
+</body>
+
+</html>
